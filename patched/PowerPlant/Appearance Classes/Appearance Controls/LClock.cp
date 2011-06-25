@@ -130,7 +130,7 @@ LClock::ClickSelf(
 	if (!mIsDisplayOnly) {
 
 		if (!IsTarget()) {				// Click on Clock makes it the Target
-			mFocusPart = kControlFocusNoPart;
+			mFocusPart = kControlFocusNextPart;
 			SwitchTarget(this);
 		}
 

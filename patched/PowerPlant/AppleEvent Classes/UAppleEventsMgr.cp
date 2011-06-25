@@ -873,6 +873,13 @@ StAEDescriptor::StAEDescriptor(
 	Assign(inFileSpec);
 }
 
+StAEDescriptor::StAEDescriptor(
+	const FSRef&	inFileSpec)
+{
+	InitToNull();
+	Assign(inFileSpec);
+}
+
 
 // ---------------------------------------------------------------------------
 //	¥ ~StAEDescriptor						Destructor				  [public]
@@ -975,6 +982,18 @@ StAEDescriptor::Assign(
 	Dispose();
 
 	OSErr	err = ::AECreateDesc(typeFSS, &inFileSpec, sizeof(FSSpec), &mDesc);
+	ThrowIfOSErr_(err);
+
+	return *this;
+}
+
+StAEDescriptor&
+StAEDescriptor::Assign(
+	const FSRef&	inFileSpec)
+{
+	Dispose();
+
+	OSErr	err = ::AECreateDesc(typeFSRef, &inFileSpec, sizeof(FSRef), &mDesc);
 	ThrowIfOSErr_(err);
 
 	return *this;

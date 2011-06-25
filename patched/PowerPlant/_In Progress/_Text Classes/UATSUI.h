@@ -48,7 +48,7 @@ public:
 						
 						LATSUIStyle( const LATSUIStyle& inOriginal );
 						
-						~LATSUIStyle();
+	virtual				~LATSUIStyle();
 						
 	operator			ATSUStyle() const;
 						

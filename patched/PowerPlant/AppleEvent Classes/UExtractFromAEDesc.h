@@ -50,6 +50,8 @@ namespace UExtractFromAEDesc {
 	
 	void	TheFSSpec	(const AEDesc& inDesc, FSSpec& outFSSpec);
 	
+	void	TheFSRef	(const AEDesc& inDesc, FSRef& outFSRef);
+	
 	void	ThePString	(const AEDesc&	inDesc,
 						 StringPtr		outString,
 						 SInt32			inMaxSize = 256);
@@ -213,6 +215,19 @@ UExtractFromAEDesc::TheFSSpec(
 	FSSpec&			outValue)
 {
 	TheData(inDesc, typeFSS, &outValue, sizeof(FSSpec));
+}
+
+
+// ---------------------------------------------------------------------------
+//	¥ TheFSRef
+// ---------------------------------------------------------------------------
+
+inline void
+UExtractFromAEDesc::TheFSRef(
+	const AEDesc&	inDesc,
+	FSRef&			outValue)
+{
+	TheData(inDesc, typeFSRef, &outValue, sizeof(FSRef));
 }
 
 

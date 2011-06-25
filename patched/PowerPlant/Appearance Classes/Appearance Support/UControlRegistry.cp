@@ -56,6 +56,7 @@
 #include <LAMTrackActionImp.h>
 #include <LAMWindowHeaderImp.h>
 									// Grayscale Appearance Implementations
+#if 0
 #include <LGABevelButtonImp.h>
 #include <LGALittleArrowsImp.h>
 #include <LGAPushButtonImp.h>
@@ -79,6 +80,7 @@
 #include <LGAPictureControlImp.h>
 #include <LGATabsControlImp.h>
 #include <LGAEditTextImp.h>
+#endif
 									// Other PP Classes
 #include <UEnvironment.h>
 #include <URegistrar.h>
@@ -197,10 +199,12 @@ UControlRegistry::RegisterClassicControls(
 	RegisterClass_(LScrollBar);
 
 	if (inAlwaysGA) {						// GA Imps
+#if 0
 		RegisterClassID_( LGACheckBoxImp,		LCheckBox::imp_class_ID);
 		RegisterClassID_( LGAPopupButtonImp,	LPopupButton::imp_class_ID);
 		RegisterClassID_( LGAPushButtonImp,		LPushButton::imp_class_ID);
 		RegisterClassID_( LGARadioButtonImp,	LRadioButton::imp_class_ID);
+#endif
 
 			// +++ No GA ScrollBar Imp. Use native Imp.
 
@@ -324,6 +328,7 @@ UControlRegistry::RegisterAMImpClasses()
 void
 UControlRegistry::RegisterGAImpClasses()
 {
+#if 0
 	RegisterClassID_( LGABevelButtonImp,		LBevelButton::imp_class_ID );
 	RegisterClassID_( LGAChasingArrowsImp,		LChasingArrows::imp_class_ID );
 	RegisterClassID_( LGACheckBoxImp,			LCheckBox::imp_class_ID );
@@ -359,6 +364,7 @@ UControlRegistry::RegisterGAImpClasses()
 		RegisterClassID_( LStdScrollBarImp,		LScrollBar::imp_class_ID);
 		// There is no std Clock.
 	}
+#endif
 }
 
 

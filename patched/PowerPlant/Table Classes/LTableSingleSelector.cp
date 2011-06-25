@@ -80,6 +80,31 @@ LTableSingleSelector::GetFirstSelectedRow() const
 	return mSelectedCell.row;
 }
 
+// ---------------------------------------------------------------------------
+//	¥ GetLastSelectedCell
+// ---------------------------------------------------------------------------
+//	Return the last selected cell, defined as the min row & col (closest to
+//  top-left corner)
+
+STableCell
+LTableSingleSelector::GetLastSelectedCell() const
+{
+	return mSelectedCell;
+}
+
+
+// ---------------------------------------------------------------------------
+//	¥ GetLastSelectedRow
+// ---------------------------------------------------------------------------
+//	Return the last selected cell's row, defined as the min row & col (closest to
+//  top-left corner)
+
+TableIndexT
+LTableSingleSelector::GetLastSelectedRow() const
+{
+	return mSelectedCell.row;
+}
+
 #pragma mark --- Selecting ---
 
 // ---------------------------------------------------------------------------

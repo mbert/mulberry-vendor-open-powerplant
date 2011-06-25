@@ -688,7 +688,7 @@ LHierarchyTable::ClickSelf(
 			::MacPtInRect(inMouseDown.whereLocal, &flagRect)) {
 										// Click is inside DropFlag
 			FocusDraw();
-			ApplyForeAndBackColors();
+			//ApplyForeAndBackColors();
 			Boolean	expanded = mCollapsableTree->IsExpanded(woRow);
 			if (LDropFlag::TrackClick(flagRect, inMouseDown.whereLocal,
 									expanded)) {

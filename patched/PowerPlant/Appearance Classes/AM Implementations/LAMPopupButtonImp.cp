@@ -148,6 +148,7 @@ LAMPopupButtonImp::PostSetValue()
 	if (menuH == LMenuController::GetEmptyMenuH()) {
 		mControlPane->Draw(nil);
 	}
+	Refresh();
 }
 #endif
 

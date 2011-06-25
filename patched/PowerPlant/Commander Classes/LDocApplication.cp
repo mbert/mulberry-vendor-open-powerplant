@@ -112,15 +112,15 @@ LDocApplication::FindCommandStatus(
 
 void
 LDocApplication::SendAEOpenDoc(
-	FSSpec&		inFileSpec)
+	PPx::FSObject&		inFileSpec)
 {
 	try {							// Create an "open document" AppleEvent
 									//   using the specified file
 		AppleEvent	openEvent;
 		UAppleEventsMgr::MakeAppleEvent(kCoreEventClass, kAEOpen, openEvent);
 
-		OSErr err = ::AEPutParamPtr(&openEvent, keyDirectObject, typeFSS,
-								&inFileSpec, sizeof(FSSpec));
+		OSErr err = ::AEPutParamPtr(&openEvent, keyDirectObject, typeFSRef,
+								&inFileSpec.UseRef(), sizeof(FSRef));
 		ThrowIfOSErr_(err);
 									// Send event so it's recorded,
 									//   but don't execute it
@@ -227,22 +227,23 @@ LDocApplication::OpenOrPrintDocList(
 
 		// Loop through all items in the list
 			// Extract descriptor for the document
-			// Coerce descriptor data into a FSSpec
+			// Coerce descriptor data into a FSRef
 			// Tell Program object to open or print document
 
 	for (SInt32 i = 1; i <= numDocs; i++) {
 		AEKeyword	theKey;
 		DescType	theType;
-		FSSpec		theFileSpec;
+		FSRef		theFileSpec;
 		Size		theSize;
-		err = ::AEGetNthPtr(&inDocList, i, typeFSS, &theKey, &theType,
-							(Ptr) &theFileSpec, sizeof(FSSpec), &theSize);
+		err = ::AEGetNthPtr(&inDocList, i, typeFSRef, &theKey, &theType,
+							(Ptr) &theFileSpec, sizeof(FSRef), &theSize);
 		ThrowIfOSErr_(err);
 
+		PPx::FSObject fs(theFileSpec);
 		if (inAENumber == ae_OpenDoc) {
-			OpenDocument(&theFileSpec);
+			OpenDocument(&fs);
 		} else {
-			PrintDocument(&theFileSpec);
+			PrintDocument(&fs);
 		}
 	}
 }
@@ -252,11 +253,11 @@ LDocApplication::OpenOrPrintDocList(
 // ---------------------------------------------------------------------------
 //	¥ OpenDocument													  [public]
 // ---------------------------------------------------------------------------
-//	Open a Document specified by an FSSpec
+//	Open a Document specified by an FSRef
 
 void
 LDocApplication::OpenDocument(
-	FSSpec*	/* inMacFSSpec */)
+	PPx::FSObject*	/* inMacFSSpec */)
 {
 	// Subclasses should override.
 	// Note that the file may already be open. One way to handle this
@@ -275,11 +276,11 @@ LDocApplication::OpenDocument(
 // ---------------------------------------------------------------------------
 //	¥ PrintDocument													  [public]
 // ---------------------------------------------------------------------------
-//	Print a Document specified by an FSSpec
+//	Print a Document specified by an FSRef
 
 void
 LDocApplication::PrintDocument(
-	FSSpec*	/* inMacFSSpec */)
+	PPx::FSObject*	/* inMacFSSpec */)
 {
 }		// Subclasses should override
 
@@ -450,7 +451,8 @@ LDocApplication::GetSubModelByName(
 	switch (inModelID) {
 
 		case cDocument: {
-			LDocument	*theDoc = LDocument::FindNamedDocument(inName);
+			PPx::CFString cfstr(inName);
+			LDocument	*theDoc = LDocument::FindNamedDocument(cfstr);
 			if (theDoc == nil) {
 				ThrowOSErr_(errAENoSuchObject);
 			}

@@ -37,6 +37,8 @@ public:
 
 	virtual	TableIndexT	GetFirstSelectedRow() const;
 	virtual	STableCell	GetFirstSelectedCell() const;
+	virtual	TableIndexT	GetLastSelectedRow() const;
+	virtual	STableCell	GetLastSelectedCell() const;
 
 	virtual void		SelectCell(
 								const STableCell		&inCell);

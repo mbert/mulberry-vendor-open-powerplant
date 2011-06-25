@@ -24,7 +24,8 @@ LIconControl::LIconControl(
 	LStream*	inStream,
 	ClassIDT	inImpID)
 
-	: LControlPane(inStream, inImpID)
+	: LControlPane(inStream, inImpID),
+		Sticns(this, kControlContentIconSuiteRes, mValue)
 {
 	IconAlignmentType	alignment;
 	*inStream >> alignment;
@@ -47,7 +48,8 @@ LIconControl::LIconControl(
 	ClassIDT			inImpID)
 
 	: LControlPane(inPaneInfo, inImpID, inControlKind,
-			Str_Empty, 0, inValueMessage, inResID)
+			Str_Empty, 0, inValueMessage, inResID),
+		Sticns(this, kControlContentIconSuiteRes, mValue)
 {
 	mValue = 0;
 }
@@ -115,6 +117,14 @@ LIconControl::GetIconTransform() const
 	return transform;
 }
 
+
+void
+LIconControl::SetResourceID(
+							ResIDT	inResID)
+{
+	if (!Sticns::Load(this, kControlContentIconSuiteRes, inResID))
+		SetDataTag(0, kControlIconResourceIDTag, sizeof(SInt16), &inResID);
+}
 
 // ---------------------------------------------------------------------------
 //	¥ HotSpotResult												   [protected]

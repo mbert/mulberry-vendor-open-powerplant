@@ -218,9 +218,9 @@ LAMStaticTextImp::SetCFDescriptor(
 		delete[] textBuffer;
 								
 		SignalIfOSErr_(err);
-		
-		mControlPane->Refresh();
 	}
+		
+	mControlPane->Refresh();
 }
 
 #endif

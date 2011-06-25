@@ -34,9 +34,9 @@ public:
 
 	virtual Boolean		AllowSubRemoval( LCommander* inSub );
 
-	virtual StringPtr	GetDescriptor( Str255 outDescriptor ) const;
+	virtual PPx::CFString	GetDescriptor() const;
 
-	virtual Boolean		UsesFileSpec( const FSSpec& inFileSpec ) const;
+	virtual Boolean		UsesFileSpec( const PPx::FSObject& inFileSpec ) const;
 
 	virtual void		MakeCurrent();
 

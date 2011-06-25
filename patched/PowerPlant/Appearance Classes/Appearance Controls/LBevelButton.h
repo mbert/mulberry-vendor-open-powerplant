@@ -14,6 +14,8 @@
 
 #include <Appearance.h>
 
+#include <Sticns.h>
+
 #if PP_Uses_Pragma_Import
 	#pragma import on
 #endif
@@ -23,7 +25,8 @@ PP_Begin_Namespace_PowerPlant
 // ---------------------------------------------------------------------------
 
 class	LBevelButton : public LControlPane,
-					   public LMenuController {
+					   public LMenuController,
+					   public Sticns {
 public:
 	enum { class_ID		= FOUR_CHAR_CODE('bbut'),
 		   imp_class_ID	= FOUR_CHAR_CODE('ibbt') };

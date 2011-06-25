@@ -80,6 +80,31 @@ LTableSingleRowSelector::GetFirstSelectedRow() const
 	return mSelectedCell.row;
 }
 
+// ---------------------------------------------------------------------------
+//	¥ GetLastSelectedCell
+// ---------------------------------------------------------------------------
+//	Return the last selected cell, defined as the min row & col (closest to
+//  top-left corner)
+
+STableCell
+LTableSingleRowSelector::GetLastSelectedCell() const
+{
+	return (mSelectedCell);
+}
+
+
+// ---------------------------------------------------------------------------
+//	¥ GetlastSelectedRow
+// ---------------------------------------------------------------------------
+//	Return the last selected cell's row, defined as the min row & col (closest to
+//  top-left corner)
+
+TableIndexT
+LTableSingleRowSelector::GetLastSelectedRow() const
+{
+	return mSelectedCell.row;
+}
+
 
 // ---------------------------------------------------------------------------
 //	¥ SelectCell
@@ -283,6 +308,9 @@ LTableSingleRowSelector::RemoveRows(
 				// so make selection empty
 
 			mSelectedCell.SetCell(0, 0);
+
+			// Added by CD to ensure table is kept up to date with selection change
+			mTableView->SelectionChanged();
 
 		} else {
 

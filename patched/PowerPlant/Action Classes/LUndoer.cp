@@ -86,7 +86,12 @@ LUndoer::ExecuteSelf(
 			SCommandStatus *status = static_cast<SCommandStatus*> (ioParam);
 
 			if (status->command == cmd_Undo) {
-				FindUndoStatus(status);
+				FindUndoStatus(status, false);	// CD: Modified to support separate Undo/Redo
+				SetExecuteHost(false);
+
+			// CD: Added to support separate Undo/Redo
+			} else if (status->command == cmd_Redo) {
+				FindUndoStatus(status, true);
 				SetExecuteHost(false);
 			} else {
 				SetExecuteHost(true);
@@ -95,6 +100,7 @@ LUndoer::ExecuteSelf(
 		}
 
 		case cmd_Undo:				// Undo/Redo the Action
+		case cmd_Redo:				// Undo/Redo the Action
 			ToggleAction();
 			SetExecuteHost(false);
 			break;
@@ -223,27 +229,29 @@ LUndoer::ToggleAction()
 // ---------------------------------------------------------------------------
 //	Enable/disable and set the text for the "undo" menu item
 
+// CD: Modified to support separate Undo/Redo
 void
 LUndoer::FindUndoStatus(
-	SCommandStatus*		ioStatus)
+	SCommandStatus*		ioStatus,
+	Boolean redo)
 {
 	*ioStatus->enabled = false;
 
 	if (mAction != nil) {
 		Str255	dummyString;
 
-		if (mAction->CanRedo()) {			// Set "Redo" text
+		if (redo && mAction->CanRedo()) {			// Set "Redo" text
 			*ioStatus->enabled = true;
 			mAction->GetDescription(ioStatus->name, dummyString);
 
-		} else if (mAction->CanUndo()) {	// Set "Undo" text
+		} else if (!redo && mAction->CanUndo()) {	// Set "Undo" text
 			*ioStatus->enabled = true;
 			mAction->GetDescription(dummyString, ioStatus->name);
 		}
 	}
 
 	if (!(*ioStatus->enabled)) {			// Set text to "Can't Undo"
-		::GetIndString(ioStatus->name, STRx_UndoEdit, str_CantRedoUndo);
+		::GetIndString(ioStatus->name, redo ? STRx_RedoEdit : STRx_UndoEdit, str_CantRedoUndo);
 	}
 }
 

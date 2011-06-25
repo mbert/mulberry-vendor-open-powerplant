@@ -37,19 +37,19 @@
 	void				SetFileCreator(
 								OSType				inFileCreator);
 
-	NavDialogOptions*	GetDialogOptions();
+	NavDialogCreationOptions*	GetDialogOptions();
 
 	void				SetDefaultLocation(
-								const FSSpec&		inFileSpec,
-								bool				inSelectIt);
+								const PPx::FSObject&	inFileSpec,
+								bool					inSelectIt);
 
 	bool				AskDesignateFile(
-								ConstStringPtr		inDefaultName);
+								CFStringRef			inDefaultName);
 
 	bool				IsValid() const;
 
 	void				GetFileSpec(
-								FSSpec&				outFileSpec) const;
+								PPx::FSObject&		outFileSpec) const;
 
 	bool				IsReplacing() const;
 

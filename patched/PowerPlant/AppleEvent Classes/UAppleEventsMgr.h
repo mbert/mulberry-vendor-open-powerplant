@@ -138,6 +138,8 @@ public:
 
 			StAEDescriptor(const FSSpec& inFileSpec);
 
+			StAEDescriptor(const FSRef& inFileSpec);
+
 			~StAEDescriptor();
 
 
@@ -176,6 +178,11 @@ public:
 								return Assign(inFileSpec);
 							}
 
+	StAEDescriptor&		operator = (const FSRef& inFileSpec)
+							{
+								return Assign(inFileSpec);
+							}
+
 	StAEDescriptor&		Assign(const StAEDescriptor& inOriginal);
 
 	StAEDescriptor&		Assign(Boolean inBoolean);
@@ -189,6 +196,8 @@ public:
 	StAEDescriptor&		Assign(ConstStringPtr inString);
 
 	StAEDescriptor&		Assign(const FSSpec& inFileSpec);
+
+	StAEDescriptor&		Assign(const FSRef& inFileSpec);
 
 	void	Dispose();
 

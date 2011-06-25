@@ -1034,7 +1034,8 @@ LEditText::ObeyCommand(
 
 	switch (inCommand) {
 
-		case cmd_Undo: {
+		case cmd_Undo:
+		case cmd_Redo: {	// CD: Added to support separate Undo/Redo
 
 				// !!! Warning !!!
 				// Although we set the bulleted text qdProcs before performing

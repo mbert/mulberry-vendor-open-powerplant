@@ -33,7 +33,9 @@ PP_Begin_Namespace_PowerPlant
 
 UNavServicesDialogs::StNavReplyRecord::StNavReplyRecord()
 {
+	mNavDialog = NULL;
 	mNavReply.validRecord = false;
+	mNavResult = kNavUserActionNone;
 
 	SetDefaultValues();
 }
@@ -87,9 +89,17 @@ UNavServicesDialogs::StNavReplyRecord::SetDefaultValues()
 
 void
 UNavServicesDialogs::StNavReplyRecord::GetFileSpec(
-	FSSpec&		outFileSpec) const
+	PPx::FSObject&	outFileSpec) const
 {
-	UExtractFromAEDesc::TheFSSpec(Selection(), outFileSpec);
+	// Get parent FSRef
+	FSRef parent;
+	UExtractFromAEDesc::TheFSRef(Selection(), parent);
+	
+	// Create parent+name spec
+	if (mNavReply.saveFileName != NULL)
+		outFileSpec = PPx::FSObject(parent, mNavReply.saveFileName);
+	else
+		outFileSpec = parent;
 }
 
 #pragma mark -
@@ -123,33 +133,48 @@ UNavServicesDialogs::Unload()
 
 SInt16
 UNavServicesDialogs::AskSaveChanges(
-	ConstStringPtr	inDocumentName,
-	ConstStringPtr	inAppName,
+	CFStringRef		inDocumentName,
+	CFStringRef		inAppName,
 	bool			inQuitting)
 {
-	NavDialogOptions	options;
-	::NavGetDefaultDialogOptions(&options);
+	NavDialogCreationOptions	options;
+	::NavGetDefaultDialogCreationOptions(&options);
 
-	LString::CopyPStr(inDocumentName, options.savedFileName);
-	LString::CopyPStr(inAppName, options.clientName);
+	options.saveFileName = inDocumentName;
+	options.clientName = inAppName;
 
 	StNavEventUPP				eventUPP(NavEventProc);
-	NavAskSaveChangesResult		reply = kNavAskSaveChangesCancel;
+	StNavReplyRecord			reply;
 
 	NavAskSaveChangesAction		action = kNavSaveChangesClosingDocument;
 	if (inQuitting) {
 		action = kNavSaveChangesQuittingApplication;
 	}
+	options.modality = kWindowModalityAppModal;
+	options.parentWindow = NULL;
 
 	UDesktop::Deactivate();
 
-	OSErr	err = ::NavAskSaveChanges(&options, action, &reply, eventUPP, nil);
+	OSErr	err = ::NavCreateAskSaveChangesDialog(&options, action, eventUPP, &reply, &reply.GetDialog());
+	err = ::NavDialogRun(reply.GetDialog());
+	if (err == noErr)
+		reply.Result() = ::NavDialogGetUserAction( reply.GetDialog() );
+	::NavDialogDispose(reply.GetDialog());
 
 	UDesktop::Activate();
 
 	ThrowIfOSErr_(err);
 
-	return (SInt16) reply;
+	switch(reply.Result())
+	{
+	case kNavUserActionSaveChanges:
+		return answer_Save;
+	case kNavUserActionDontSaveChanges:
+		return answer_DontSave;
+	case kNavUserActionCancel:
+	default:
+		return answer_Cancel;
+	}
 }
 
 
@@ -159,25 +184,29 @@ UNavServicesDialogs::AskSaveChanges(
 
 bool
 UNavServicesDialogs::AskConfirmRevert(
-	ConstStringPtr	inDocumentName)
+	CFStringRef		inDocumentName)
 {
-	NavDialogOptions	options;
-	::NavGetDefaultDialogOptions(&options);
+	NavDialogCreationOptions	options;
+	::NavGetDefaultDialogCreationOptions(&options);
 
-	LString::CopyPStr(inDocumentName, options.savedFileName);
+	options.saveFileName = inDocumentName;
 
 	StNavEventUPP				eventUPP(NavEventProc);
-	NavAskDiscardChangesResult	reply = kNavAskDiscardChangesCancel;
+	StNavReplyRecord			reply;
 
 	UDesktop::Deactivate();
 
-	OSErr	err = ::NavAskDiscardChanges(&options, &reply, eventUPP, nil);
+	OSErr	err = ::NavCreateAskDiscardChangesDialog(&options, eventUPP, &reply, &reply.GetDialog());
+	err = ::NavDialogRun(reply.GetDialog());
+	if (err == noErr)
+		reply.Result() = ::NavDialogGetUserAction( reply.GetDialog() );
+	::NavDialogDispose(reply.GetDialog());
 
 	UDesktop::Activate();
 
 	ThrowIfOSErr_(err);
 
-	return (reply == kNavAskDiscardChanges);
+	return (reply.Result() == kNavAskDiscardChanges);
 }
 
 #pragma mark -
@@ -191,15 +220,15 @@ UNavServicesDialogs::AskConfirmRevert(
 bool
 UNavServicesDialogs::AskOpenOneFile(
 	OSType					inFileType,
-	FSSpec&					outFileSpec,
+	PPx::FSObject&			outFileSpec,
 	NavDialogOptionFlags	inFlags)
 {
 	LFileTypeList	fileTypes(inFileType);
 	LFileChooser	chooser;
 
 	inFlags &= ~kNavAllowMultipleFiles;		// Can't select multiple files
-	NavDialogOptions*	options = chooser.GetDialogOptions();
-	options->dialogOptionFlags = inFlags;
+	NavDialogCreationOptions*	options = chooser.GetDialogOptions();
+	options->optionFlags = inFlags;
 
 	bool	askOK = chooser.AskOpenFile(fileTypes);
 
@@ -218,16 +247,29 @@ UNavServicesDialogs::AskOpenOneFile(
 bool
 UNavServicesDialogs::AskChooseOneFile(
 	OSType					inFileType,
-	FSSpec&					outFileSpec,
+	PPx::FSObject&			outFileSpec,
 	NavDialogOptionFlags	inFlags)
+{
+	if (inFileType)
 {
 	LFileTypeList	fileTypes(inFileType);
 	LFileChooser	chooser;
 
-	NavDialogOptions*	options = chooser.GetDialogOptions();
-	options->dialogOptionFlags = inFlags;
+		NavDialogCreationOptions*	options = chooser.GetDialogOptions();
+		options->optionFlags = inFlags;
+
+		return chooser.AskChooseOneFile(fileTypes, outFileSpec);
+	}
+	else
+	{
+		LFileTypeList	fileTypes(fileTypes_All);
+		LFileChooser	chooser;
+
+		NavDialogCreationOptions*	options = chooser.GetDialogOptions();
+		options->optionFlags = inFlags;
 
 	return chooser.AskChooseOneFile(fileTypes, outFileSpec);
+	}
 }
 
 
@@ -237,7 +279,7 @@ UNavServicesDialogs::AskChooseOneFile(
 
 bool
 UNavServicesDialogs::AskChooseFolder(
-	FSSpec&					outFileSpec,
+	PPx::FSObject&			outFileSpec,
 	SInt32&					outFolderDirID)
 {
 	LFileChooser	chooser;
@@ -252,13 +294,12 @@ UNavServicesDialogs::AskChooseFolder(
 
 bool
 UNavServicesDialogs::AskChooseVolume(
-	FSSpec&					outFileSpec)
+	PPx::FSObject&			outFileSpec)
 {
 	LFileChooser	chooser;
 
 	return chooser.AskChooseVolume(outFileSpec);
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ AskSaveFile													  [public]
@@ -266,9 +307,9 @@ UNavServicesDialogs::AskChooseVolume(
 
 bool
 UNavServicesDialogs::AskSaveFile(
-	ConstStringPtr			inDefaultName,
+	CFStringRef				inDefaultName,
 	OSType					inFileType,
-	FSSpec&					outFileSpec,
+	PPx::FSObject&			outFileSpec,
 	bool&					outReplacing,
 	NavDialogOptionFlags	inFlags)
 {
@@ -285,8 +326,8 @@ UNavServicesDialogs::AskSaveFile(
 		inFlags |= kNavNoTypePopup;
 	}
 
-	NavDialogOptions*	options = designator.GetDialogOptions();
-	options->dialogOptionFlags = inFlags;
+	NavDialogCreationOptions*	options = designator.GetDialogOptions();
+	options->optionFlags = inFlags;
 
 	bool	askOK = designator.AskDesignateFile(inDefaultName);
 
@@ -311,10 +352,17 @@ UNavServicesDialogs::AskSaveFile(
 
 UNavServicesDialogs::LFileChooser::LFileChooser()
 {
-	::NavGetDefaultDialogOptions(&mNavOptions);
+	::NavGetDefaultDialogCreationOptions(&mNavCreateOptions);
 
-	::GetIndString( mNavOptions.windowTitle,
-					STRx_Standards, str_OpenDialogTitle);
+	Str255 wTitle;
+	::GetIndString( wTitle,
+					STRx_Standards, str_SaveDialogTitle);
+	if (*wTitle)
+	{
+		mNavCreateOptions.windowTitle = ::CFStringCreateWithPascalString(kCFAllocatorDefault, wTitle, ::CFStringGetSystemEncoding());
+	}
+	else
+		mNavCreateOptions.windowTitle = NULL;
 
 	mNavFilterProc	= nil;
 	mNavPreviewProc	= nil;
@@ -335,10 +383,10 @@ UNavServicesDialogs::LFileChooser::~LFileChooser()
 //	¥ LFileChooser::GetDialogOptions								  [public]
 // ---------------------------------------------------------------------------
 
-NavDialogOptions*
+NavDialogCreationOptions*
 UNavServicesDialogs::LFileChooser::GetDialogOptions()
 {
-	return &mNavOptions;
+	return &mNavCreateOptions;
 }
 
 
@@ -353,13 +401,12 @@ UNavServicesDialogs::LFileChooser::GetDialogOptions()
 
 void
 UNavServicesDialogs::LFileChooser::SetDefaultLocation(
-	const FSSpec&	inFileSpec,
-	bool			inSelectIt)
+	const PPx::FSObject&	inFileSpec,
+	bool					inSelectIt)
 {
-	mDefaultLocation = inFileSpec;
+	mDefaultLocation = inFileSpec.UseRef();
 	mSelectDefault	 = inSelectIt;
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ LFileChooser::SetObjectFilterProc								  [public]
@@ -413,23 +460,24 @@ UNavServicesDialogs::LFileChooser::AskOpenFile(
 		defaultLocationDesc = mDefaultLocation;
 
 		if (mSelectDefault) {
-			mNavOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags |= kNavSelectDefaultLocation;
 		} else {
-			mNavOptions.dialogOptionFlags &= ~kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags &= ~kNavSelectDefaultLocation;
 		}
 	}
 
 	UDesktop::Deactivate();
 
-	OSErr err = ::NavGetFile(
-						defaultLocationDesc,
-						mNavReply,
-						&mNavOptions,
+	OSErr err = ::NavCreateGetFileDialog(
+						&mNavCreateOptions,
+						inFileTypes.TypeListHandle(),
 						eventUPP,
 						previewUPP,
 						objectFilterUPP,
-						inFileTypes.TypeListHandle(),
-						0L);							// User Data
+						this,
+						&mNavReply.GetDialog());
+	err = ::NavDialogRun(mNavReply.GetDialog());
+	::NavDialogDispose(mNavReply.GetDialog());
 
 	UDesktop::Activate();
 
@@ -437,7 +485,7 @@ UNavServicesDialogs::LFileChooser::AskOpenFile(
 		Throw_(err);
 	}
 
-	return mNavReply.IsValid();
+	return mNavReply.Result() == kNavUserActionOpen;
 }
 
 
@@ -448,7 +496,7 @@ UNavServicesDialogs::LFileChooser::AskOpenFile(
 bool
 UNavServicesDialogs::LFileChooser::AskChooseOneFile(
 	const LFileTypeList&	inFileTypes,
-	FSSpec&					outFileSpec)
+	PPx::FSObject&			outFileSpec)
 {
 									// Create UPPs for callback functions
 	StNavEventUPP			eventUPP(NavEventProc);
@@ -458,7 +506,7 @@ UNavServicesDialogs::LFileChooser::AskChooseOneFile(
 	mNavReply.SetDefaultValues();
 
 									// Can choose only one file
-	mNavOptions.dialogOptionFlags &= ~kNavAllowMultipleFiles;
+	mNavCreateOptions.optionFlags &= ~kNavAllowMultipleFiles;
 
 									// Set default location, the location
 									//   that's displayed when the dialog
@@ -468,23 +516,24 @@ UNavServicesDialogs::LFileChooser::AskChooseOneFile(
 		defaultLocationDesc = mDefaultLocation;
 
 		if (mSelectDefault) {
-			mNavOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags |= kNavSelectDefaultLocation;
 		} else {
-			mNavOptions.dialogOptionFlags &= ~kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags &= ~kNavSelectDefaultLocation;
 		}
 	}
 
 	UDesktop::Deactivate();
 
-	OSErr err = ::NavChooseFile(
-						defaultLocationDesc,
-						mNavReply,
-						&mNavOptions,
+	OSErr err = ::NavCreateChooseFileDialog(
+						&mNavCreateOptions,
+						inFileTypes.TypeListHandle(),
 						eventUPP,
 						previewUPP,
 						objectFilterUPP,
-						inFileTypes.TypeListHandle(),
-						0L);							// User Data
+						this,
+						&mNavReply.GetDialog());
+	err = ::NavDialogRun(mNavReply.GetDialog());
+	::NavDialogDispose(mNavReply.GetDialog());
 
 	UDesktop::Activate();
 
@@ -492,13 +541,12 @@ UNavServicesDialogs::LFileChooser::AskChooseOneFile(
 		Throw_(err);
 	}
 
-	if (mNavReply.IsValid()) {
+	if (mNavReply.Result() == kNavUserActionChoose) {
 		mNavReply.GetFileSpec(outFileSpec);
 	}
 
-	return mNavReply.IsValid();
+	return mNavReply.Result() == kNavUserActionChoose;
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ LFileChooser::AskChooseFolder									  [public]
@@ -506,7 +554,7 @@ UNavServicesDialogs::LFileChooser::AskChooseOneFile(
 
 bool
 UNavServicesDialogs::LFileChooser::AskChooseFolder(
-	FSSpec&			outFileSpec,
+	PPx::FSObject&	outFileSpec,
 	SInt32&			outFolderDirID)
 {
 									// Create UPPs for callback functions
@@ -523,21 +571,22 @@ UNavServicesDialogs::LFileChooser::AskChooseFolder(
 		defaultLocationDesc = mDefaultLocation;
 
 		if (mSelectDefault) {
-			mNavOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags |= kNavSelectDefaultLocation;
 		} else {
-			mNavOptions.dialogOptionFlags &= ~kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags &= ~kNavSelectDefaultLocation;
 		}
 	}
 
 	UDesktop::Deactivate();
 
-	OSErr err = ::NavChooseFolder(
-						defaultLocationDesc,
-						mNavReply,
-						&mNavOptions,
+	OSErr err = ::NavCreateChooseFolderDialog(
+						&mNavCreateOptions,
 						eventUPP,
 						objectFilterUPP,
-						0L);							// User Data
+						this,
+						&mNavReply.GetDialog());
+	err = ::NavDialogRun(mNavReply.GetDialog());
+	::NavDialogDispose(mNavReply.GetDialog());
 
 	UDesktop::Activate();
 
@@ -545,26 +594,13 @@ UNavServicesDialogs::LFileChooser::AskChooseFolder(
 		Throw_(err);
 	}
 
-	if (mNavReply.IsValid()) {		// User chose a folder
-
-		FSSpec	folderInfo;
-		mNavReply.GetFileSpec(folderInfo);
-
-			// The FSSpec from NavChooseFolder is NOT the file spec
-			// for the folder. The parID field is actually the DirID
-			// of the folder itself, not the folder's parent, and
-			// the name field is empty. We call FSMakeFSSpec() using those
-			// value to create an FSSpec for the folder itself.
-
-		outFolderDirID = folderInfo.parID;
-
-		::FSMakeFSSpec(folderInfo.vRefNum, folderInfo.parID, folderInfo.name,
-						&outFileSpec);
+	if (mNavReply.Result() == kNavUserActionChoose) {
+		mNavReply.GetFileSpec(outFileSpec);
+		outFolderDirID = 0;
 	}
 
-	return mNavReply.IsValid();
+	return mNavReply.Result() == kNavUserActionChoose;
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ LFileChooser::AskChooseVolume									  [public]
@@ -572,7 +608,7 @@ UNavServicesDialogs::LFileChooser::AskChooseFolder(
 
 bool
 UNavServicesDialogs::LFileChooser::AskChooseVolume(
-	FSSpec&		outFileSpec)
+	PPx::FSObject&	outFileSpec)
 {
 									// Create UPPs for callback functions
 	StNavEventUPP			eventUPP(NavEventProc);
@@ -587,51 +623,28 @@ UNavServicesDialogs::LFileChooser::AskChooseVolume(
 			// mSelectDefault should always be true when selecting
 			// volumes since we can't navigate into anything
 
-		mNavOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+		mNavCreateOptions.optionFlags |= kNavSelectDefaultLocation;
 	}
 
 	UDesktop::Deactivate();
 
-	OSErr err = ::NavChooseVolume(
-						defaultLocationDesc,
-						mNavReply,
-						&mNavOptions,
+	OSErr err = ::NavCreateChooseVolumeDialog(
+						&mNavCreateOptions,
 						eventUPP,
 						objectFilterUPP,
-						0L);							// User Data
+						this,
+						&mNavReply.GetDialog());
+	err = ::NavDialogRun(mNavReply.GetDialog());
+	::NavDialogDispose(mNavReply.GetDialog());
 
 	UDesktop::Activate();
 
-	if (mNavReply.IsValid()) {		// User chose a volume
-
-		FSSpec	volumeInfo;
-		mNavReply.GetFileSpec(volumeInfo);
-
-			// The FSSpec from NavChooseFolder is NOT the file spec
-			// for the volume. The parID field is actually the DirID
-			// of the volume itself, not the volumes's parent, and
-			// the name field is empty. We must call PBGetCatInfo
-			// to get the parent DirID and volume name
-
-		Str255		name;
-		CInfoPBRec	thePB;			// Directory Info Parameter Block
-		thePB.dirInfo.ioCompletion	= nil;
-		thePB.dirInfo.ioVRefNum		= volumeInfo.vRefNum;	// Volume is right
-		thePB.dirInfo.ioDrDirID		= volumeInfo.parID;		// Volumes's DirID
-		thePB.dirInfo.ioNamePtr		= name;
-		thePB.dirInfo.ioFDirIndex	= -1;	// Lookup using Volume and DirID
-
-		err = ::PBGetCatInfoSync(&thePB);
-		ThrowIfOSErr_(err);
-
-											// Create cannonical FSSpec
-		::FSMakeFSSpec(thePB.dirInfo.ioVRefNum, thePB.dirInfo.ioDrParID,
-					   name, &outFileSpec);
+	if (mNavReply.Result() == kNavUserActionChoose) {
+		mNavReply.GetFileSpec(outFileSpec);
 	}
 
-	return mNavReply.IsValid();
+	return mNavReply.Result() == kNavUserActionChoose;
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ LFileChooser::IsValid											  [public]
@@ -670,19 +683,22 @@ UNavServicesDialogs::LFileChooser::GetNumberOfFiles() const
 
 void
 UNavServicesDialogs::LFileChooser::GetFileSpec(
-	SInt32		inIndex,
-	FSSpec&		outFileSpec) const
+	SInt32			inIndex,
+	PPx::FSObject&	outFileSpec) const
 {
+	FSRef		temp;
 	AEKeyword	theKey;
 	DescType	theType;
 	Size		theSize;
 
 	AEDescList	selectedItems = mNavReply.Selection();
-	OSErr err = ::AEGetNthPtr(&selectedItems, inIndex, typeFSS,
-						&theKey, &theType, (Ptr) &outFileSpec,
-						sizeof(FSSpec), &theSize);
+	OSErr err = ::AEGetNthPtr(&selectedItems, inIndex, typeFSRef,
+						&theKey, &theType, (Ptr) &temp,
+						sizeof(FSRef), &theSize);
 
 	ThrowIfOSErr_(err);
+	
+	outFileSpec = temp;
 }
 
 
@@ -721,12 +737,19 @@ UNavServicesDialogs::LFileChooser::GetScriptCode() const
 
 UNavServicesDialogs::LFileDesignator::LFileDesignator()
 {
-	::NavGetDefaultDialogOptions(&mNavOptions);
+	::NavGetDefaultDialogCreationOptions(&mNavCreateOptions);
 
-	::GetIndString( mNavOptions.windowTitle,
+	Str255 wTitle;
+	::GetIndString( wTitle,
 					STRx_Standards, str_SaveDialogTitle);
+	if (*wTitle)
+	{
+		mNavCreateOptions.windowTitle = ::CFStringCreateWithPascalString(kCFAllocatorDefault, wTitle, ::CFStringGetSystemEncoding());
+	}
+	else
+		mNavCreateOptions.windowTitle = NULL;
 
-	mFileType	 = FOUR_CHAR_CODE('\?\?\?\?');
+	mFileType	 = FOUR_CHAR_CODE('????');
 	mFileCreator = LFileTypeList::GetProcessSignature();
 }
 
@@ -737,6 +760,8 @@ UNavServicesDialogs::LFileDesignator::LFileDesignator()
 
 UNavServicesDialogs::LFileDesignator::~LFileDesignator()
 {
+	if (mNavCreateOptions.windowTitle != NULL)
+		::CFRelease(mNavCreateOptions.windowTitle);
 }
 
 
@@ -768,10 +793,10 @@ UNavServicesDialogs::LFileDesignator::SetFileCreator(
 //	¥ LFileDesignator::GetDialogOptions								  [public]
 // ---------------------------------------------------------------------------
 
-NavDialogOptions*
+NavDialogCreationOptions*
 UNavServicesDialogs::LFileDesignator::GetDialogOptions()
 {
-	return &mNavOptions;
+	return &mNavCreateOptions;
 }
 
 
@@ -781,13 +806,12 @@ UNavServicesDialogs::LFileDesignator::GetDialogOptions()
 
 void
 UNavServicesDialogs::LFileDesignator::SetDefaultLocation(
-	const FSSpec&	inFileSpec,
-	bool			inSelectIt)
+	const PPx::FSObject&	inFileSpec,
+	bool					inSelectIt)
 {
-	mDefaultLocation = inFileSpec;
+	mDefaultLocation = inFileSpec.UseRef();
 	mSelectDefault	 = inSelectIt;
 }
-
 
 // ---------------------------------------------------------------------------
 //	¥ LFileDesignator::AskDesignateFile								  [public]
@@ -795,11 +819,11 @@ UNavServicesDialogs::LFileDesignator::SetDefaultLocation(
 
 bool
 UNavServicesDialogs::LFileDesignator::AskDesignateFile(
-	ConstStringPtr	inDefaultName)
+	CFStringRef	inDefaultName)
 {
 	StNavEventUPP		eventUPP(NavEventProc);
 
-	LString::CopyPStr(inDefaultName, mNavOptions.savedFileName);
+	mNavCreateOptions.saveFileName = inDefaultName;
 
 	mNavReply.SetDefaultValues();
 
@@ -808,22 +832,23 @@ UNavServicesDialogs::LFileDesignator::AskDesignateFile(
 		defaultLocationDesc = mDefaultLocation;
 
 		if (mSelectDefault) {
-			mNavOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags |= kNavSelectDefaultLocation;
 		} else {
-			mNavOptions.dialogOptionFlags &= ~kNavSelectDefaultLocation;
+			mNavCreateOptions.optionFlags &= ~kNavSelectDefaultLocation;
 		}
 	}
 
 	UDesktop::Deactivate();
 
-	OSErr err = ::NavPutFile(
-						defaultLocationDesc,
-						mNavReply,
-						&mNavOptions,
-						eventUPP,
+	OSErr err = ::NavCreatePutFileDialog(
+						&mNavCreateOptions,
 						mFileType,
 						mFileCreator,
-						0L);					// User Data
+						eventUPP,
+						this,
+						&mNavReply.GetDialog());					// User Data
+	err = ::NavDialogRun(mNavReply.GetDialog());
+	::NavDialogDispose(mNavReply.GetDialog());
 
 	UDesktop::Activate();
 
@@ -831,7 +856,7 @@ UNavServicesDialogs::LFileDesignator::AskDesignateFile(
 		Throw_(err);
 	}
 
-	return mNavReply.IsValid();
+	return mNavReply.Result() == kNavUserActionSaveAs;
 }
 
 
@@ -852,7 +877,7 @@ UNavServicesDialogs::LFileDesignator::IsValid() const
 
 void
 UNavServicesDialogs::LFileDesignator::GetFileSpec(
-	FSSpec&		outFileSpec) const
+	PPx::FSObject&		outFileSpec) const
 {
 	mNavReply.GetFileSpec(outFileSpec);
 }
@@ -916,7 +941,7 @@ pascal void
 UNavServicesDialogs::NavEventProc(
 	NavEventCallbackMessage		inSelector,
 	NavCBRecPtr					ioParams,
-	NavCallBackUserData			/* ioUserData */)
+	NavCallBackUserData			ioUserData)
 {
 	if (inSelector == kNavCBEvent) {
 		try {
@@ -924,6 +949,17 @@ UNavServicesDialogs::NavEventProc(
 		}
 
 		catch (...) { }			// Can't throw back through the Toolbox
+	}
+	else if (inSelector == kNavCBUserAction)
+	{
+		// Get callback data
+		UNavServicesDialogs::StNavReplyRecord* d = (UNavServicesDialogs::StNavReplyRecord*)ioUserData;
+		
+		// Get reply recors
+		OSErr err = ::NavDialogGetReply(d->GetDialog(), &d->Get());
+		
+		// Get the result
+		d->Result() = ioParams->userAction;
 	}
 }
 

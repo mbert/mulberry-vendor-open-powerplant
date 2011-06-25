@@ -11,6 +11,8 @@
 
 #include <LApplication.h>
 
+#include <PPxFSObject.h>
+
 #if PP_Uses_Pragma_Import
 	#pragma import on
 #endif
@@ -36,7 +38,7 @@ public:
 									UInt16&				outMark,
 									Str255				outName);
 
-	virtual void			SendAEOpenDoc( FSSpec& inFileSpec );
+	virtual void			SendAEOpenDoc( PPx::FSObject& inFileSpec );
 
 	virtual void			SendAEOpenDocList( const AEDescList& inFileList );
 
@@ -51,9 +53,9 @@ public:
 									const AEDescList&	inDocList,
 									SInt32				inAENumber);
 
-	virtual void			OpenDocument( FSSpec* inMacFSSpec );
+	virtual void			OpenDocument( PPx::FSObject* inMacFSSpec );
 
-	virtual void			PrintDocument( FSSpec* inMacFSSpec );
+	virtual void			PrintDocument( PPx::FSObject* inMacFSSpec );
 
 	virtual LModelObject*	MakeNewDocument();
 	virtual void			ChooseDocument();

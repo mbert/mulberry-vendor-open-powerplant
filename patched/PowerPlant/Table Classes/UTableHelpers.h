@@ -114,6 +114,8 @@ public:
 								const STableCell		&inCell) const = 0;
 	virtual	STableCell	GetFirstSelectedCell() const = 0;
 	virtual	TableIndexT	GetFirstSelectedRow() const = 0;
+	virtual	STableCell	GetLastSelectedCell() const = 0;
+	virtual	TableIndexT	GetLastSelectedRow() const = 0;
 
 	virtual void		SelectCell(
 								const STableCell		&inCell) = 0;

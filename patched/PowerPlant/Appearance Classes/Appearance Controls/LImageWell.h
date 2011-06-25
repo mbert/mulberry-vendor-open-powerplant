@@ -12,6 +12,8 @@
 #include <LControlView.h>
 #include <Appearance.h>
 
+#include "Sticns.h"
+
 #if PP_Uses_Pragma_Import
 	#pragma import on
 #endif
@@ -20,7 +22,8 @@ PP_Begin_Namespace_PowerPlant
 
 // ---------------------------------------------------------------------------
 
-class	LImageWell : public LControlView {
+class	LImageWell : public LControlView,
+						public Sticns {
 public:
 	enum { class_ID		= FOUR_CHAR_CODE('iwel'),
 		   imp_class_ID	= FOUR_CHAR_CODE('iiwl') };

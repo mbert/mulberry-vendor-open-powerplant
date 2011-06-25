@@ -23,7 +23,8 @@ LImageWell::LImageWell(
 	LStream*	inStream,
 	ClassIDT	inImpID)
 
-	: LControlView(inStream, inImpID)
+	: LControlView(inStream, inImpID),
+		Sticns(this, GetMinValue() & 0xFF, GetValue())
 {
 	SetMinValue(0);
 	SetValue(0);
@@ -45,7 +46,8 @@ LImageWell::LImageWell(
 
 	: LControlView(inPaneInfo, inViewInfo, inImpID,
 						kControlImageWellProc, Str_Empty, 0, inValueMessage,
-						inContentResID, inContentType, 0)
+						inContentResID, inContentType, 0),
+		Sticns(this, GetMinValue() & 0xFF, GetValue())
 {
 	SetMinValue(0);
 	SetValue(0);

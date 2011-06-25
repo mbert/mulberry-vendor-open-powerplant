@@ -16,6 +16,7 @@
 #include <LFileTypeList.h>
 #include <UAppleEventsMgr.h>
 #include <Navigation.h>
+#include <PPxFSObject.h>
 
 #if PP_Uses_Pragma_Import
 	#pragma import on
@@ -39,7 +40,11 @@ namespace UNavServicesDialogs {
 
 			operator NavReplyRecord*()		{ return &mNavReply; }
 
+			NavDialogRef&		GetDialog()	{ return mNavDialog; }
+
 			NavReplyRecord&		Get()		{ return mNavReply; }
+
+			UInt32&				Result()	{ return mNavResult; }
 
 			bool				IsValid() const
 											{ return mNavReply.validRecord; }
@@ -57,10 +62,12 @@ namespace UNavServicesDialogs {
 											{ return mNavReply.keyScript; }
 
 			void				GetFileSpec(
-										FSSpec&		outFileSpec) const;
+										PPx::FSObject&		outFileSpec) const;
 
 		protected:
+			NavDialogRef		mNavDialog;
 			NavReplyRecord		mNavReply;
+			UInt32				mNavResult;
 
 		private:					// Unimplemented to prevent copying
 								StNavReplyRecord(
@@ -80,12 +87,12 @@ namespace UNavServicesDialogs {
 			#include <LFileChooser.i>
 
 		protected:
-			StNavReplyRecord		mNavReply;
-			NavDialogOptions		mNavOptions;
-			NavObjectFilterProcPtr	mNavFilterProc;
-			NavPreviewProcPtr		mNavPreviewProc;
-			StAEDescriptor			mDefaultLocation;
-			bool					mSelectDefault;
+			StNavReplyRecord			mNavReply;
+			NavDialogCreationOptions	mNavCreateOptions;
+			NavObjectFilterProcPtr		mNavFilterProc;
+			NavPreviewProcPtr			mNavPreviewProc;
+			StAEDescriptor				mDefaultLocation;
+			bool						mSelectDefault;
 	};
 
 	// -----------------------------------------------------------------------
@@ -95,12 +102,15 @@ namespace UNavServicesDialogs {
 			#include <LFileDesignator.i>
 
 		protected:
-			StNavReplyRecord	mNavReply;
-			NavDialogOptions	mNavOptions;
-			OSType				mFileType;
-			OSType				mFileCreator;
-			StAEDescriptor		mDefaultLocation;
-			bool				mSelectDefault;
+			StNavReplyRecord			mNavReply;
+			NavDialogCreationOptions	mNavCreateOptions;
+			OSType						mFileType;
+			OSType						mFileCreator;
+			StAEDescriptor				mDefaultLocation;
+			bool						mSelectDefault;
+			
+			friend pascal void NavEventProc(NavEventCallbackMessage, NavCBRecPtr, NavCallBackUserData);
+	
 	};
 
 	// -----------------------------------------------------------------------

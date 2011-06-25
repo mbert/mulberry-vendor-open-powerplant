@@ -46,7 +46,8 @@ protected:
 
 	virtual void		ToggleAction();
 
-	virtual void		FindUndoStatus( SCommandStatus* ioStatus );
+	virtual void		FindUndoStatus( SCommandStatus* ioStatus,
+										Boolean redo );
 
 private:					// Unimplemented copy and assignment
 						LUndoer( const LUndoer& );

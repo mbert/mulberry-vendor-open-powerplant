@@ -29,12 +29,12 @@ class	LFileStream : public LFile,
 public:
 							LFileStream();
 
-							LFileStream( const FSSpec& inFileSpec );
+							LFileStream( const PPx::FSObject& inFileSpec );
 
 							LFileStream(
 									AliasHandle		inAlias,
 									Boolean&		outWasChanged,
-									FSSpec*			inFromFile = nil);
+									PPx::FSObject*	inFromFile = nil);
 
 	virtual					~LFileStream();
 

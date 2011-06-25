@@ -31,10 +31,10 @@
 
 						~LFileChooser();
 
-	NavDialogOptions*	GetDialogOptions();
+	NavDialogCreationOptions*	GetDialogOptions();
 
 	void				SetDefaultLocation(
-								const FSSpec&			inFileSpec,
+								const PPx::FSObject&	inFileSpec,
 								bool					inSelectIt);
 
 	void				SetObjectFilterProc(
@@ -48,22 +48,22 @@
 
 	bool				AskChooseOneFile(
 								const LFileTypeList&	inFileTypes,
-								FSSpec					&outFileSpec);
+								PPx::FSObject			&outFileSpec);
 
 	bool				AskChooseFolder(
-								FSSpec&					outFileSpec,
+								PPx::FSObject&			outFileSpec,
 								SInt32&					outFolderDirID);
 
 	bool				AskChooseVolume(
-								FSSpec&					outFileSpec);
+								PPx::FSObject&			outFileSpec);
 
 	bool				IsValid() const;
 
 	SInt32				GetNumberOfFiles() const;
 
 	void				GetFileSpec(
-								SInt32		inIndex,
-								FSSpec&		outFileSpec) const;
+								SInt32			inIndex,
+								PPx::FSObject&	outFileSpec) const;
 
 	void				GetFileDescList(
 								AEDescList&	outDescList) const;
